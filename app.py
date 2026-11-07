@@ -90,6 +90,20 @@ def require_json_body():
         return jsonify({"error": "Request body must be a JSON object"}), 400
 
 
+# --- JSON errors instead of Flask's default HTML pages ---
+@app.errorhandler(404)
+def handle_404(e):
+    return jsonify({"error": "Not found"}), 404
+
+@app.errorhandler(405)
+def handle_405(e):
+    return jsonify({"error": "Method not allowed"}), 405
+
+@app.errorhandler(500)
+def handle_500(e):
+    return jsonify({"error": "Internal server error"}), 500
+
+
 #1. /register
 @app.route('/register', methods=['POST'], endpoint='register_post')
 def register_post():
@@ -156,9 +170,9 @@ def add_exercise():
     if not name or not isinstance(name, str):
         return jsonify({"error": "Malformed input"}), 400
 
-    url = f"https://api.api-ninjas.com/v1/exercises?name={name}"
     try:
-        response = requests.get(url, headers={'X-Api-Key': API_NINJAS_KEY})
+        response = requests.get("https://api.api-ninjas.com/v1/exercises", params={"name": name},
+                                headers={'X-Api-Key': API_NINJAS_KEY}, timeout=10)
         if response.status_code != 200:
             return jsonify({"error": "API Ninjas error"}), 502
         results = response.json()
