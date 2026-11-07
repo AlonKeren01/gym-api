@@ -22,6 +22,7 @@ def reset_state():
     gym_app.exercises.clear()
     gym_app.schedule_list.clear()
     gym_app.next_user_id = 1
+    gym_app.last_appt_id.clear()
 
 
 # --- Shared helpers (used by the extended tests at the bottom of the file) ---
@@ -1383,3 +1384,35 @@ def test_end_to_end_register_exercise_book_move_cancel(mock_get, client):
     assert client.delete(f"/schedule/{uid}/{appt_id}", headers=user_h).status_code == 204
     assert client.get(f"/schedule/{uid}/{appt_id}", headers=user_h).status_code == 404
     assert client.get("/schedule", headers=ADMIN_H).get_json() == []
+
+
+# --- Deleting an exercise, and appt-id numbering ---
+
+def test_deleting_an_exercise_cancels_its_bookings(client, world):
+    book(client, 1, "inc1")
+    book(client, 1, "ben1", date="21/11/2026")
+    assert client.delete("/exercises/inc1", headers=ADMIN_H).status_code == 204
+    left = client.get("/schedule", headers=ADMIN_H).get_json()
+    assert [r["exercise-code"] for r in left] == ["ben1"]
+    assert client.get("/schedule/1/1", headers=hdr(1)).status_code == 404
+
+
+def test_a_new_exercise_that_reuses_a_code_starts_with_no_bookings(client, world):
+    book(client, 1, "inc1")
+    client.delete("/exercises/inc1", headers=ADMIN_H)
+    add_exercise("inc1", "Incline Bench Press")
+    assert book(client, 2, "inc1").status_code == 201  # same slot, free again
+
+
+def test_appt_ids_are_never_reused_after_cancelling_the_newest(client, world):
+    assert book(client, 1, "inc1", date="20/11/2026").get_json()["appt-id"] == 1
+    assert book(client, 1, "inc1", date="21/11/2026").get_json()["appt-id"] == 2
+    client.delete("/schedule/1/2", headers=hdr(1))
+    assert book(client, 1, "inc1", date="22/11/2026").get_json()["appt-id"] == 3
+
+
+def test_cancelling_an_older_appointment_keeps_the_numbering_going(client, world):
+    book(client, 1, "inc1", date="20/11/2026")
+    book(client, 1, "inc1", date="21/11/2026")
+    client.delete("/schedule/1/1", headers=hdr(1))
+    assert book(client, 1, "inc1", date="22/11/2026").get_json()["appt-id"] == 3
