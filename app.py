@@ -79,6 +79,17 @@ def require_api_key():
         return jsonify({"error": "Unauthorized"}), 401
 
 
+@app.before_request
+def require_json_body():
+    # POST/PUT bodies must be a JSON object: 415 for another Content-Type, 400 if it is not an object.
+    if request.endpoint is None or request.method not in ('POST', 'PUT'):
+        return
+    if not request.is_json:
+        return jsonify({"error": "Expected application/json media type"}), 415
+    if not isinstance(request.get_json(silent=True), dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+
+
 #1. /register
 @app.route('/register', methods=['POST'], endpoint='register_post')
 def register_post():
