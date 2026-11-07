@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import string
 import requests
 from datetime import datetime
@@ -42,15 +43,19 @@ def generate_exercise_code(name):
         count += 1
     return f"{prefix}{count}"
 
+DATE_PATTERN = re.compile(r"\d{2}/\d{2}/\d{4}")  # strict DD/MM/YYYY
+
 def validate_date(date_str):
+    """None if valid, else an error response: 400 not a real DD/MM/YYYY date, 422 outside the window."""
+    if not isinstance(date_str, str) or not DATE_PATTERN.fullmatch(date_str):
+        return jsonify({"error": "Malformed date, expected DD/MM/YYYY"}), 400
     try:
         d = datetime.strptime(date_str, "%d/%m/%Y")
-        # All requests must be for a date between Nov 15, 2026 and Dec 15, 2026 inclusive.
-        start = datetime(2026, 11, 15)
-        end = datetime(2026, 12, 15)
-        return start <= d <= end
     except ValueError:
-        return False
+        return jsonify({"error": "Malformed date, not a real calendar day"}), 400
+    if not datetime(2026, 11, 15) <= d <= datetime(2026, 12, 15):
+        return jsonify({"error": "Date must be between 15/11/2026 and 15/12/2026"}), 422
+    return None
 
 
 # --- Authentication Middleware ---
@@ -237,8 +242,9 @@ def create_schedule(user_id, exercise_code):
     date_str = data.get('date')
     period = data.get('period') 
 
-    if not date_str or not validate_date(date_str):
-        return jsonify({"error": "Invalid or out-of-range date"}), 422
+    date_error = validate_date(date_str)
+    if date_error:
+        return date_error
 
     if period and period not in ["morning", "afternoon", "evening"]:
         return jsonify({"error": "Invalid period"}), 400
@@ -323,8 +329,9 @@ def manage_appointment(user_id, appt_id):
         date_str = data.get('date')
         period = data.get('period')
         
-        if not date_str or not validate_date(date_str):
-            return jsonify({"error": "Invalid or out-of-range date"}), 422
+        date_error = validate_date(date_str)
+        if date_error:
+            return date_error
 
         if period and period not in ["morning", "afternoon", "evening"]:
             return jsonify({"error": "Invalid period"}), 400

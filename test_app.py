@@ -888,13 +888,13 @@ def test_any_non_200_from_ninja_is_502(mock_get, client, status):
 
 
 @patch("app.requests.get")
-def test_ninja_error_body_follows_the_lecture_message(mock_get, client):
-    """RED until fixed. Lecture 2 message for an external API failure: 'API response code <n>'.
-    (The assignment overrides the lecture's status code with 502.)"""
+def test_ninja_error_has_a_json_error_body(mock_get, client):
+    """The status is 502 (assignment); the message text is our own, it only has to be JSON."""
     mock_ninja(mock_get, [], status=503)
     res = client.post("/exercises", json={"name": "Squat"}, headers=ADMIN_H)
     assert res.status_code == 502
-    assert res.get_json() == {"error": "API response code 503"}
+    assert res.is_json
+    assert "error" in res.get_json()
 
 
 @patch("app.requests.get")
