@@ -427,4 +427,4 @@ def get_all_schedules():
 
 if __name__ == '__main__':
     # Listen on 0.0.0.0 on port 5001
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=False)
