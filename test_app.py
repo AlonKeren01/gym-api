@@ -184,6 +184,7 @@ def test_register_twice(client):
 
 def test_exercises_query_strings(client):
     """Tests GET /exercises with valid and nonsensical query strings[cite: 36, 47]."""
+    add_user(1, "dummy_key")
     gym_app.exercises["inc1"] = {"name": "Incline", "type": "strength", "muscle-group": "chest", "difficulty": "expert", "exercise-code": "inc1"}
     gym_app.exercises["ben1"] = {"name": "Bench", "type": "strength", "muscle-group": "chest", "difficulty": "beginner", "exercise-code": "ben1"}
     
@@ -486,6 +487,7 @@ def test_add_exercise_no_exact_name_match(mock_get, client):
 
 def test_get_exercise_by_code_details_and_not_found(client):
     """GET /exercises/{exercise-code} returns name, type, muscle-group, and difficulty[cite: 37]. Returns 404 if not found[cite: 33]."""
+    add_user(1, "dummy_key")
     gym_app.exercises["inc1"] = {
         "name": "Incline hammer curls",
         "type": "strength",

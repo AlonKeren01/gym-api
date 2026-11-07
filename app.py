@@ -61,27 +61,22 @@ def validate_date(date_str):
 # --- Authentication Middleware ---
 @app.before_request
 def require_api_key():
-    # All API requests except POST /register and POST /validate require the API-key header.
-    if request.endpoint in ['register_post', 'validate_user']:
-        return
-
-    # Handled specifically inside the GET route for admin.
-    if request.endpoint == 'register_get':
+    # Skipped: /register and /validate (GET /register checks admin itself) and unknown routes (404/405).
+    if request.endpoint in [None, 'register_post', 'register_get', 'validate_user']:
         return
 
     api_key = request.headers.get("X-Api-Key")
     if not api_key:
-        return jsonify({"error": "Missing API Key header"}), 400
+        return jsonify({"error": "Missing API Key header"}), 401
 
-    # If the endpoint includes a specific user-id, the request must use that exact user's API-key.
-    user_id_str = request.view_args.get('user_id') if request.view_args else None
-    if user_id_str is not None:
-        try:
-            uid = int(user_id_str)
-            if uid not in users or users[uid]["API-key"] != api_key:
-                return jsonify({"error": "Unauthorized"}), 401
-        except ValueError:
-            return jsonify({"error": "Malformed user-id"}), 400
+    # A URL with a user-id needs that user's key; any other URL needs some registered user's key.
+    user_id = request.view_args.get('user_id')
+    if user_id is not None:
+        valid = user_id in users and users[user_id]["API-key"] == api_key
+    else:
+        valid = any(u["API-key"] == api_key for u in users.values())
+    if not valid:
+        return jsonify({"error": "Unauthorized"}), 401
 
 
 #1. /register
