@@ -105,12 +105,12 @@ def test_validate_user(client):
     
     # 2. Validate regular user (Privileged should be False)[cite: 35]
     res_regular = client.post(f'/validate/{uid}', json={"API-key": api_key})
-    assert res_regular.status_code == 200
+    assert res_regular.status_code == 201
     assert res_regular.get_json()["privileged"] is False #[cite: 35]
     
     # 3. Validate admin user (Privileged should be True)[cite: 35]
     res_admin = client.post('/validate/0', json={"API-key": "ytngh52@gb&&ubt8"})
-    assert res_admin.status_code == 200
+    assert res_admin.status_code == 201
     assert res_admin.get_json()["privileged"] is True #[cite: 35]
 
 
@@ -818,7 +818,7 @@ def test_validate_admin_id_with_wrong_key_and_regular_id_with_admin_key_are_401(
 
 def test_validate_does_not_need_the_api_key_header(client, world):
     res = client.post("/validate/1", json={"API-key": gym_app.users[1]["API-key"]})
-    assert res.status_code == 200
+    assert res.status_code == 201
     assert res.get_json() == {"privileged": False}
 
 

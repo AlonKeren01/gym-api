@@ -155,7 +155,7 @@ def validate_user(user_id):
     
     #True if used id has admin privileges
     is_privileged = (user_id == 0)
-    return jsonify({"privileged": is_privileged}), 200
+    return jsonify({"privileged": is_privileged}), 201
 
 
 #3. /exercises

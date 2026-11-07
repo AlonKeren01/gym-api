@@ -2,7 +2,6 @@
 name = "gym-api"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
 authors = [
     { name = "Alon Keren", email = "alon.keren111@gmail.com" }
 ]
