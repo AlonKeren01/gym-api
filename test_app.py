@@ -106,12 +106,12 @@ def test_validate_user(client):
     
     # 2. Validate regular user (Privileged should be False)[cite: 35]
     res_regular = client.post(f'/validate/{uid}', json={"API-key": api_key})
-    assert res_regular.status_code == 201
+    assert res_regular.status_code == 200
     assert res_regular.get_json()["privileged"] is False #[cite: 35]
     
     # 3. Validate admin user (Privileged should be True)[cite: 35]
     res_admin = client.post('/validate/0', json={"API-key": "ytngh52@gb&&ubt8"})
-    assert res_admin.status_code == 201
+    assert res_admin.status_code == 200
     assert res_admin.get_json()["privileged"] is True #[cite: 35]
 
 
@@ -819,7 +819,7 @@ def test_validate_admin_id_with_wrong_key_and_regular_id_with_admin_key_are_401(
 
 def test_validate_does_not_need_the_api_key_header(client, world):
     res = client.post("/validate/1", json={"API-key": gym_app.users[1]["API-key"]})
-    assert res.status_code == 201
+    assert res.status_code == 200
     assert res.get_json() == {"privileged": False}
 
 
@@ -1340,7 +1340,7 @@ def test_admin_schedule_filter_returns_only_that_exercise(client, world):
     assert len(res.get_json()) == 2
 
 
-# --- Status-code conventions (lecture 2: only a successful POST returns 201) ---
+# --- Status-code conventions (creation POSTs return 201; validation returns 200) ---
 
 def test_only_successful_posts_return_201(client, world):
     created = book(client, 1, "inc1")
@@ -1388,20 +1388,25 @@ def test_end_to_end_register_exercise_book_move_cancel(mock_get, client):
 
 # --- Deleting an exercise, and appt-id numbering ---
 
-def test_deleting_an_exercise_cancels_its_bookings(client, world):
+def test_deleting_an_exercise_keeps_existing_bookings_and_prevents_new_ones(client, world):
     book(client, 1, "inc1")
     book(client, 1, "ben1", date="21/11/2026")
+    before = client.get("/schedule/1/1", headers=hdr(1)).get_json()
+    schedule_before = client.get("/schedule", headers=ADMIN_H).get_json()
     assert client.delete("/exercises/inc1", headers=ADMIN_H).status_code == 204
-    left = client.get("/schedule", headers=ADMIN_H).get_json()
-    assert [r["exercise-code"] for r in left] == ["ben1"]
-    assert client.get("/schedule/1/1", headers=hdr(1)).status_code == 404
+    assert client.get("/schedule", headers=ADMIN_H).get_json() == schedule_before
+    existing = client.get("/schedule/1/1", headers=hdr(1))
+    assert existing.status_code == 200
+    assert existing.get_json() == before
+    assert book(client, 2, "inc1", date="22/11/2026").status_code == 404
+    assert client.get("/schedule", headers=ADMIN_H).get_json() == schedule_before
 
 
-def test_a_new_exercise_that_reuses_a_code_starts_with_no_bookings(client, world):
+def test_reusing_an_exercise_code_does_not_erase_existing_bookings(client, world):
     book(client, 1, "inc1")
     client.delete("/exercises/inc1", headers=ADMIN_H)
     add_exercise("inc1", "Incline Bench Press")
-    assert book(client, 2, "inc1").status_code == 201  # same slot, free again
+    assert book(client, 2, "inc1").status_code == 422  # existing booking still holds the slot
 
 
 def test_appt_ids_are_never_reused_after_cancelling_the_newest(client, world):

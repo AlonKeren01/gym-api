@@ -174,8 +174,8 @@ def validate_user(user_id):
     if user_id not in users or users[user_id]["API-key"] != api_key:
         return jsonify({"error": "Unauthorized"}), 401
 
-    # Only the admin (id 0) is privileged
-    return jsonify({"privileged": user_id == 0}), 201
+    # Validation creates nothing, so success is 200. Only admin (id 0) is privileged.
+    return jsonify({"privileged": user_id == 0}), 200
 
 
 # 3. /exercises
@@ -257,8 +257,7 @@ def delete_exercise(exercise_code):
         return jsonify({"error": "Exercise not found"}), 404
 
     del exercises[exercise_code]
-    # Its bookings go with it, or a new exercise that reuses the code would inherit them
-    schedule_list[:] = [s for s in schedule_list if s['exercise-code'] != exercise_code]
+    # Stop offering the exercise, but keep appointments already made for it.
     return '', 204
 
 
